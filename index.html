@@ -35,6 +35,7 @@ small{opacity:.65;font-size:11px;display:block;line-height:1.4}
 <button id="bHost">💙 I'm Aymane — create a room</button>
 <div class="row"><input id="code" placeholder="CODE" maxlength="5"><button id="bJoin">💗 I'm Koutar — join a room</button></div>
 <div id="status"></div>
+<div id="picker" style="display:none;font-size:13px;margin:6px 0">📷 Choose your characters picture:<br><input type="file" id="pic" accept="image/*" style="text-transform:none;width:auto"></div>
 <small>Same keyboard: Aymane = W A D · Koutar = ← ↑ →<br>Online: W A D or arrow keys · R restart · M mute · N/P next/prev chapter (host)</small>
 </div></div>
 </div>
@@ -124,6 +125,7 @@ const Snd={ac:null,m:false,prog:0,
   else if(k==='door'){this.n(330,t,.2,'triangle',.12,d);this.n(495,t+.1,.3,'triangle',.12,d)}
   else if(k==='resp'){this.n(220,t,.3,'sawtooth',.04,d)}
   else if(k==='win'){[523,659,784,1047,1319].forEach((f,i)=>this.n(f,t+i*.12,.6,'triangle',.14,d))}
+  else if(k==='party'){[523,659,784,1047,784,1047,1319,1568,1319,1568,2093].forEach((f,i)=>{this.n(f,t+i*.16,.7,'triangle',.14,d);this.n(f/2,t+i*.16,.7,'sine',.08,d)})}
  },
  blip(w){
   if(!this.ac)return;const t=this.ac.currentTime;
@@ -305,7 +307,7 @@ function win(){
 }
 function nextLevel(){
  if(G.lv+1<LV.length)loadLevel(G.lv+1);
- else{G.ph='end';G.pt=0;FW=[]}
+ else{G.ph='end';G.pt=0;FW=[];CF=[];ev('party')}
 }
 function nextLine(){
  G.ii++;G.pt=0;
@@ -314,7 +316,7 @@ function nextLine(){
 function doEnter(){
  if(G.ph==='intro'){const L=CONFIG.intro[G.ii];if(G.pt<L.t.length*2)G.pt=L.t.length*2;else nextLine()}
  else if(G.ph==='found'&&G.pt>30)nextLevel();
- else if(G.ph==='end'&&G.pt>60)startGame(0);
+ else if(G.ph==='end'&&G.pt>600)startGame(0);
 }
 function restart(){G.tot=G.startTot;loadLevel(G.lv)}
 function jump(d){
@@ -488,10 +490,10 @@ function getImg(s){
  return imgs[s].complete&&imgs[s].naturalWidth?imgs[s]:null;
 }
 function drawChar(who,cx,fy,f,an,mouth,sc){
- const C=who?CONFIG.girl:CONFIG.boy,im=getImg(C.img);
+ const C=who?CONFIG.girl:CONFIG.boy,sp=SPR[who?1:0];
  ctx.save();ctx.translate(cx,fy);ctx.scale((sc||1)*(f<0?-1:1),sc||1);
  const sw=Math.sin(an)*4,bob=Math.abs(Math.sin(an))*1.5;
- if(im){const h=62,w=h*im.naturalWidth/im.naturalHeight;ctx.drawImage(im,-w/2,-h-bob,w,h);ctx.restore();return}
+ if(sp){const h=SIZE,im=(sc||1)>1.3?sp[1]:sp[0],w=h*im.width/im.height;ctx.rotate(Math.sin(an)*.07);ctx.drawImage(im,-w/2,-h-bob,w,h);ctx.restore();return}
  ctx.translate(0,-bob);
  const E=(x,y,rx,ry,col)=>{ctx.fillStyle=col;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,7);ctx.fill()};
  const B=(x,y,w,h,col,r)=>{ctx.fillStyle=col;ctx.beginPath();ctx.roundRect(x,y,w,h,r||2);ctx.fill()};
@@ -678,10 +680,12 @@ function drawFoundText(){
  ctx.textAlign='left';
 }
 let ENDL=null;
+let CF=[],CFfr=0;
 function drawEnd(){
+ const pt=G.pt,party=pt<280;
  ctx.drawImage(getBG('garden'),0,0);drawPA('petal');
- // fireworks
- if(fr%35===0){
+ // fireworks (faster during the celebration)
+ if(fr%(party?14:35)===0){
   const cx=100+Math.random()*760,cy=60+Math.random()*160,col='hsl('+Math.floor(Math.random()*360)+',90%,70%)';
   for(let i=0;i<36;i++){const a=i/36*6.283,s=1.5+Math.random()*2;FW.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:70,c:col})}
  }
@@ -689,24 +693,64 @@ function drawEnd(){
  for(const p of FW){p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.l--;ctx.globalAlpha=p.l/70;ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,3,3)}
  ctx.globalAlpha=1;
  groundDraw(TH.garden,470);
- const hop=-Math.abs(Math.sin(G.pt*.08))*5;
- drawChar(0,438,470+hop,1,0,0,2.2);drawChar(1,522,470+hop,-1,0,0,2.2);
+ // the two jump for joy
+ const hop=-Math.abs(Math.sin(pt*.08*(party?1.6:1)))*(party?16:5);
+ drawChar(0,438,470+hop,1,0,party,2.2);drawChar(1,522,470+hop,-1,0,party,2.2);
  ctx.fillStyle='#ff6b9a';
- for(let i=0;i<6;i++)heart(480+Math.sin(G.pt*.03+i*2)*40,380-((G.pt*.7+i*60)%200),9+i%3*3);
- // letter
+ for(let i=0;i<6;i++)heart(480+Math.sin(pt*.03+i*2)*40,380-((pt*.7+i*60)%200),9+i%3*3);
+ // confetti
+ const step=fr!==CFfr;CFfr=fr;
+ if(step)for(let i=0;i<(party?5:1);i++)CF.push({x:Math.random()*W,y:-10,vx:Math.random()*2-1,vy:2+Math.random()*3,r:Math.random()*6,vr:Math.random()*.3-.15,s:6+Math.random()*7,c:'hsl('+Math.floor(Math.random()*360)+',90%,65%)'});
+ CF=CF.filter(p=>p.y<H+20);
+ for(const p of CF){
+  if(step){p.x+=p.vx+Math.sin(p.y*.03);p.y+=p.vy;p.r+=p.vr}
+  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);ctx.restore();
+ }
+ // ===== Arabic congratulations =====
+ if(party){
+  const fade=pt>240?(280-pt)/40:1,pop=Math.min(1,pt/30),sc=1+(1-pop)*(1-pop)*1.6;
+  ctx.save();
+  ctx.globalAlpha=fade;ctx.fillStyle='rgba(10,5,25,.5)';ctx.fillRect(0,40,W,265);
+  ctx.direction='rtl';ctx.textAlign='center';ctx.shadowColor='#f9a8d4';ctx.shadowBlur=26;
+  ctx.save();ctx.translate(W/2,135);const bz=sc*(1+Math.sin(pt*.12)*.03);ctx.scale(bz,bz);
+  ctx.fillStyle='#fff';ctx.font='bold 72px Tahoma,Arial,sans-serif';
+  ctx.fillText('مبروك يا '+CONFIG.girl.nameAr+'! 🎉',0,0);
+  ctx.restore();
+  const line=(txt,y,col,start,size)=>{
+   if(pt<start)return;
+   ctx.save();ctx.globalAlpha=fade*Math.min(1,(pt-start)/20);
+   ctx.fillStyle=col;ctx.font='bold '+size+'px Tahoma,Arial,sans-serif';
+   ctx.fillText(txt,W/2,y+Math.max(0,(start+20-pt))*.8);ctx.restore();
+  };
+  line('لقد وجدتِ أيمن... وأكملتِ المغامرة كلها ♥',200,'#fde68a',40,34);
+  line('أنتِ أجمل شيء حدث في حياتي',247,'#f9a8d4',100,34);
+  line('أحبكِ يا '+CONFIG.girl.nameAr+' ♥',290,'#ffffff',160,30);
+  ctx.restore();
+ }
+ // ===== letter (after the celebration) =====
  ctx.font='italic 22px Georgia,serif';
  if(!ENDL){
   ENDL=[];let y=0,tot=0;
   CONFIG.letter.forEach(par=>{wrap(par,620).forEach(t=>{ENDL.push({t,y});y+=30;tot+=t.length});y+=8});
   ENDL.h=y+40;ENDL.tot=tot;
  }
- ctx.fillStyle='rgba(255,244,220,.94)';ctx.strokeStyle='#d9b26a';ctx.lineWidth=3;
- ctx.beginPath();ctx.roundRect(130,24,700,Math.min(ENDL.h,330),14);ctx.fill();ctx.stroke();
- let rem=Math.max(0,Math.floor((G.pt-50)/2));
- ctx.fillStyle='#5a3a2a';
- ENDL.forEach(l=>{if(rem>0){ctx.fillText(l.t.slice(0,rem),165,70+l.y);rem-=l.t.length}});
+ if(!party){
+  ctx.save();ctx.globalAlpha=Math.min(1,(pt-280)/30);
+  ctx.fillStyle='rgba(255,244,220,.94)';ctx.strokeStyle='#d9b26a';ctx.lineWidth=3;
+  ctx.beginPath();ctx.roundRect(130,24,700,Math.min(ENDL.h,330),14);ctx.fill();ctx.stroke();
+  let rem=Math.max(0,Math.floor((pt-310)/2));
+  ctx.fillStyle='#5a3a2a';ctx.font='italic 22px Georgia,serif';
+  ENDL.forEach(l=>{if(rem>0){ctx.fillText(l.t.slice(0,rem),165,70+l.y);rem-=l.t.length}});
+  ctx.restore();
+  // permanent Arabic line
+  ctx.save();ctx.direction='rtl';ctx.textAlign='center';
+  ctx.shadowColor='#000';ctx.shadowBlur=8;ctx.fillStyle='#f9a8d4';
+  ctx.font='bold 26px Tahoma,Arial,sans-serif';
+  ctx.fillText('مبروك يا '+CONFIG.girl.nameAr+' ♥ أحبكِ',W/2,H-40);
+  ctx.restore();
+ }
  ctx.fillStyle='#fff';ctx.font='15px system-ui';ctx.textAlign='center';
- ctx.fillText('Hearts collected: '+G.tot+' ♥   ·   '+(G.mode==='guest'?'':'Enter — play again'),W/2,H-12);
+ ctx.fillText('Hearts collected: '+G.tot+' ♥'+(G.mode==='guest'||pt<600?'':'   ·   Enter — play again'),W/2,H-12);
  ctx.textAlign='left';
 }
 function draw(){
@@ -721,6 +765,69 @@ function draw(){
   drawPlayers();drawHUD();
  }
 }
+
+/* ---------- Character picture ---------- */
+const SIZE=46,SPR=[null,null]; // SIZE = character height in the game (smaller number = smaller characters)
+function mip(c,h){
+ let cur=c;
+ while(cur.height>h*2){const t=document.createElement('canvas');t.width=Math.round(cur.width/2);t.height=Math.round(cur.height/2);const tx=t.getContext('2d');tx.imageSmoothingQuality='high';tx.drawImage(cur,0,0,t.width,t.height);cur=t}
+ const o=document.createElement('canvas');o.height=h;o.width=Math.round(c.width*h/c.height);
+ const x=o.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(cur,0,0,o.width,o.height);return o;
+}
+function buildSprites(img){
+ const sw=800,sh=Math.round(800*img.naturalHeight/img.naturalWidth);
+ const c=document.createElement('canvas');c.width=sw;c.height=sh;
+ const x=c.getContext('2d');x.drawImage(img,0,0,sw,sh);
+ let d;try{d=x.getImageData(0,0,sw,sh)}catch(e){return false}
+ const px=d.data,N=sw*sh,bg=[px[0],px[1],px[2]],isBg=new Uint8Array(N),st=[];
+ const near=i=>{const o=i*4,a=px[o]-bg[0],b=px[o+1]-bg[1],e=px[o+2]-bg[2];return a*a+b*b+e*e<4900};
+ for(let i=0;i<sw;i++)st.push(i,N-sw+i);
+ for(let j=0;j<sh;j++)st.push(j*sw,j*sw+sw-1);
+ while(st.length){
+  const i=st.pop();if(i<0||i>=N||isBg[i]||!near(i))continue;
+  isBg[i]=1;const xx=i%sw;if(xx>0)st.push(i-1);if(xx<sw-1)st.push(i+1);st.push(i-sw,i+sw);
+ }
+ const lab=new Int32Array(N),comps=[];
+ for(let s=0;s<N;s++){
+  if(isBg[s]||lab[s])continue;
+  const id=comps.length+1,q=[s];lab[s]=id;
+  let n=0,x0=sw,x1=0,y0=sh,y1=0,sx=0;
+  while(q.length){
+   const i=q.pop(),xx=i%sw,yy=(i-xx)/sw;n++;sx+=xx;
+   if(xx<x0)x0=xx;if(xx>x1)x1=xx;if(yy<y0)y0=yy;if(yy>y1)y1=yy;
+   if(xx>0&&!isBg[i-1]&&!lab[i-1]){lab[i-1]=id;q.push(i-1)}
+   if(xx<sw-1&&!isBg[i+1]&&!lab[i+1]){lab[i+1]=id;q.push(i+1)}
+   if(yy>0&&!isBg[i-sw]&&!lab[i-sw]){lab[i-sw]=id;q.push(i-sw)}
+   if(yy<sh-1&&!isBg[i+sw]&&!lab[i+sw]){lab[i+sw]=id;q.push(i+sw)}
+  }
+  comps.push({id,n,x0,x1,y0,y1,cx:sx/n});
+ }
+ comps.sort((a,b)=>b.n-a.n);
+ const two=comps.slice(0,2);if(two.length<2)return false;
+ two.sort((a,b)=>a.cx-b.cx);
+ two.forEach((k,j)=>{
+  const w=k.x1-k.x0+1,h=k.y1-k.y0+1,o=document.createElement('canvas');o.width=w;o.height=h;
+  const ox=o.getContext('2d'),od=ox.createImageData(w,h);
+  for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
+   const i=(yy+k.y0)*sw+xx+k.x0;
+   if(lab[i]===k.id){const a=i*4,b=(yy*w+xx)*4;od.data[b]=px[a];od.data[b+1]=px[a+1];od.data[b+2]=px[a+2];od.data[b+3]=255}
+  }
+  ox.putImageData(od,0,0);SPR[j]=[mip(o,64),mip(o,150)];
+ });
+ return true;
+}
+function tryImg(src,ok,fail){const im=new Image();im.onload=()=>buildSprites(im)?ok():fail();im.onerror=fail;im.src=src}
+function needPicker(){$('picker').style.display='block'}
+tryImg('characters.png',()=>{},()=>{
+ let s=null;try{s=localStorage.getItem('ak_chars')}catch(e){}
+ if(s)tryImg(s,()=>{},needPicker);else needPicker();
+});
+$('pic').onchange=e=>{
+ const f=e.target.files[0];if(!f)return;
+ const r=new FileReader();
+ r.onload=()=>tryImg(r.result,()=>{try{localStorage.setItem('ak_chars',r.result)}catch(x){}$('picker').style.display='none'},needPicker);
+ r.readAsDataURL(f);
+};
 
 /* ---------- Loop ---------- */
 function tick(){
