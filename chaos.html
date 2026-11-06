@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Love &amp; Chaos: Crazy Chase!</title>
+<script>
+if (window.top === window.self) {
+  const home = new URL('index.html', location.href);
+  const room = new URLSearchParams(location.search).get('room');
+  if (room) home.searchParams.set('chaos', room);
+  location.replace(home);
+}
+</script>
+<link rel="stylesheet" href="game.css">
+<body class="arcade">
+<main id="stage">
+<canvas id="world" width="960" height="540" aria-label="Love and Chaos game"></canvas>
+<section id="menu" class="overlay">
+  <div class="panel">
+    <span class="eyebrow">02 / ARCADE MODE</span>
+    <h1>Love &amp; Chaos<br><em>Crazy Chase!</em></h1>
+    <label for="mission">Mission Selection</label>
+    <select id="mission"></select>
+    <button id="local" class="primary">Play Together on One Keyboard</button>
+    <button id="host">I'm Aymane — Create an Online Room</button>
+    <div class="join"><input id="room" maxlength="5" placeholder="CODE" aria-label="Room code"><button id="join">I'm Kaoutar — Join an Online Room</button></div>
+    <p id="status" role="status"></p>
+    <a id="invite" hidden>Share invitation link</a>
+    <small>Aymane · A D W E<br>Kaoutar · ← → ↑ &nbsp; M hearts · L bat · K kiss · J stow<br>R restart · V mute · Esc pause</small>
+    <button id="main">← Back to Main Selection</button>
+  </div>
+</section>
+<section id="pause" class="overlay" hidden>
+  <div class="panel"><span class="eyebrow">LOVE &amp; CHAOS</span><h2 id="pause-title">Paused</h2><p id="pause-detail"></p><button id="resume" class="primary">Resume</button><button id="missions">Mission Menu</button></div>
+</section>
+</main>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="sprites.js"></script>
+<script src="chaos.js"></script>
+</body>
+</html>
